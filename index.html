@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧱</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="一款結合奇幻冒險元素、獨特關卡機制與 Boss 挑戰的極致網頁打磚塊遊戲。" />
+    <title>磚塊之境：古老冒險 - Quest Brick Breaker</title>
+    
+    <!-- 引入高質感字型 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@300;400;600;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <main id="app">
+      <!-- 遊戲視窗容器 -->
+      <div id="gameContainer">
+        <!-- 畫布 -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- 1. 開始畫面 (Start Screen) -->
+        <div id="screenStart" class="overlay-screen">
+          <div class="title-container animate-pulse">
+            <h1 class="game-title">磚塊之境</h1>
+            <p class="game-subtitle">THE ANCIENT QUEST</p>
+          </div>
+          <p class="game-desc">釋放古老魔法，擊碎阻擋在前方的遠古磚塊，挑戰林地、沙塵與深淵的巨型守護者！</p>
+          <button id="btnStart" class="btn-primary" type="button">進入冒險</button>
+        </div>
+
+        <!-- 2. 關卡選擇畫面 (Level Select Screen) -->
+        <div id="screenLevelSelect" class="overlay-screen hidden">
+          <h2 class="section-title">選擇要探索的領地</h2>
+          <div class="level-list">
+            <button class="level-card forest" data-level="0" type="button">
+              <div class="level-badge">關卡 1</div>
+              <h3>迷霧森林</h3>
+              <p>古樹與藤蔓纏繞的靜謐林地，藤蔓能吸收並減輕撞擊傷害。</p>
+              <div class="boss-info">守護者: 樹妖長老</div>
+            </button>
+            <button class="level-card desert" data-level="1" type="button">
+              <div class="level-badge">關卡 2</div>
+              <h3>炙熱沙丘</h3>
+              <p>飄忽不定的流砂與暗藏毒針的仙人掌，考驗你的精準反應。</p>
+              <div class="boss-info">守護者: 狂沙死神</div>
+            </button>
+            <button class="level-card ocean" data-level="2" type="button">
+              <div class="level-badge">關卡 3</div>
+              <h3>深淵之海</h3>
+              <p>極寒冰晶會凍結彈速，古老的珊瑚群會自我增生與修復。</p>
+              <div class="boss-info">守護者: 深淵巨妖</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. 遊戲內 Overlay UI -->
+        <div id="gameOverlayUI" class="hud-container hidden">
+          <!-- 頂部狀態列 -->
+          <div class="hud-header">
+            <div class="hud-left">
+              <div class="stat-item">
+                <span class="label">生命：</span>
+                <div id="uiHp" class="hp-hearts"></div>
+              </div>
+              <div class="stat-item mp-item">
+                <span class="label">魔力 (MP)：</span>
+                <div class="mp-bar-container">
+                  <div id="uiMpFill" class="mp-bar-fill"></div>
+                  <span id="uiMpText">100/100</span>
+                </div>
+              </div>
+            </div>
+            <div class="hud-center">
+              <div id="uiLevelName" class="level-indicator">迷霧森林</div>
+            </div>
+            <div class="hud-right">
+              <div class="stat-item">
+                <span class="label">金幣：</span>
+                <span id="uiGold" class="value yellow-glow">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="label">分數：</span>
+                <span id="uiScore" class="value text-white">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部主動技能欄 -->
+          <div class="hud-skills">
+            <button id="skillMeteor" class="skill-btn" title="烈焰隕石 (快捷鍵: 1)" type="button">
+              <div class="skill-icon">☄️</div>
+              <div class="skill-meta">
+                <span class="skill-name">烈焰隕石</span>
+                <span class="skill-cost">40 MP</span>
+              </div>
+              <div class="cooldown"></div>
+            </button>
+            <button id="skillTimeSlow" class="skill-btn" title="時空減速 (快捷鍵: 2)" type="button">
+              <div class="skill-icon">⚡</div>
+              <div class="skill-meta">
+                <span class="skill-name">時空減速</span>
+                <span class="skill-cost">30 MP</span>
+              </div>
+              <div class="cooldown"></div>
+            </button>
+          </div>
+          <div class="controls-hint">滑鼠控制擋板移動，左鍵或空白鍵發射球</div>
+        </div>
+
+        <!-- 4. 商店畫面 (Shop Screen) -->
+        <div id="screenShop" class="overlay-screen hidden">
+          <div class="shop-header">
+            <h2 class="section-title">神秘魔法流浪商店</h2>
+            <div class="shop-gold-container">
+              擁有金幣: <span id="shopGold" class="yellow-glow">0</span> 🪙
+            </div>
+          </div>
+          <div class="shop-list">
+            <div class="shop-item">
+              <div class="shop-icon">❤️</div>
+              <h3>生命上限</h3>
+              <p>最大生命值增加 1 點並恢復所有血量。</p>
+              <button id="buyHp" class="btn-buy" type="button"><span id="hpCost">15 金幣</span> | <span id="hpLevel">Lv. 0</span></button>
+            </div>
+            <div class="shop-item">
+              <div class="shop-icon">↔️</div>
+              <h3>擋板加寬</h3>
+              <p>增加擋板的基礎寬度，更易於接住彈珠。</p>
+              <button id="buyWidth" class="btn-buy" type="button"><span id="widthCost">20 金幣</span> | <span id="widthLevel">Lv. 0</span></button>
+            </div>
+            <div class="shop-item">
+              <div class="shop-icon">⚔️</div>
+              <h3>力量灌注</h3>
+              <p>增加彈珠的基礎傷害，更快速破壞磚塊。</p>
+              <button id="buyDamage" class="btn-buy" type="button"><span id="dmgCost">30 金幣</span> | <span id="dmgLevel">Lv. 0</span></button>
+            </div>
+            <div class="shop-item">
+              <div class="shop-icon">🪙</div>
+              <h3>財富符文</h3>
+              <p>使破壞磚塊獲得的金幣收益提升 50%。</p>
+              <button id="buyGold" class="btn-buy" type="button"><span id="goldCost">25 金幣</span> | <span id="goldLevel">Lv. 0</span></button>
+            </div>
+          </div>
+          <button id="btnShopBack" class="btn-secondary" type="button">繼續冒險</button>
+        </div>
+
+        <!-- 5. 遊戲結束畫面 (Game Over Screen) -->
+        <div id="screenGameOver" class="overlay-screen hidden">
+          <h2 class="game-title text-red animate-pulse">冒險失敗</h2>
+          <p class="game-desc">你的力量已經耗盡，但冒險的精神永存！</p>
+          <div id="overScore" class="score-display">最終分數: 0</div>
+          <button id="btnOverRestart" class="btn-primary" type="button">重新挑戰</button>
+        </div>
+
+        <!-- 6. 通關勝利畫面 (Victory Screen) -->
+        <div id="screenVictory" class="overlay-screen hidden">
+          <h2 class="game-title text-gold animate-pulse">凱旋而歸</h2>
+          <p class="game-desc">你成功擊敗了守護者，獲得了領地的古老祕寶！</p>
+          <div id="vicScore" class="score-display">最終分數: 0</div>
+          <button id="btnVicNext" class="btn-primary" type="button">進入魔法商店</button>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

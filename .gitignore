@@ -1,56 +1,24 @@
-# Windows system files
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-*.tmp
-~$*
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Environment variables and secrets
-.env
-.env.*
-*.key
-credentials.*
-secrets.*
-service-account*.json
+node_modules
+dist
+dist-ssr
+*.local
 
-# IDEs and editors
-.vscode/
-.idea/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.swp
-
-# Node / package managers
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-lock.yaml
-package-lock.json
-
-# NotebookLM and private exports
-notebooks.json
-notebooklm/
-NotebookLM/
-exports/
-downloads/
-
-# Generated or experimental outputs
-generated/
-generated_images/
-images/generated/
-*.png
-*.jpg
-*.jpeg
-*.webp
-*.gif
-*.pptx
-*.docx
-*.pdf
-
-# Local test apps
-wordcloud-app/
-scratch/
-tmp/
+*.sw?
