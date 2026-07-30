@@ -34,8 +34,24 @@
           </div>
 
           <div class="input-group">
-            <label for="textInput">或貼上整段文章</label>
-            <textarea id="textInput" placeholder="在此貼上文章，系統將自動進行詞頻統計與文字過濾..."></textarea>
+            <label for="textInput">或貼上整段文章 / 影片網址</label>
+            <textarea id="textInput" placeholder="在此貼上文章，或直接貼上 YouTube 影片網址以自動拉取字幕..."></textarea>
+          </div>
+
+          <!-- 新增：MarkItDown 檔案解析拖放上傳區 -->
+          <div class="upload-zone" id="uploadZone">
+            <div class="upload-content">
+              <div class="upload-icon">☁️</div>
+              <div class="upload-text">
+                <span class="highlight">點擊選擇檔案</span> 或將檔案拖曳至此
+              </div>
+              <div class="upload-hint">支援 PDF, Word, Excel, PPT, TXT, MD (Powered by MarkItDown)</div>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.md" style="display: none;" />
+            <div class="upload-loader" id="uploadLoader" style="display: none;">
+              <div class="spinner"></div>
+              <span id="uploadStatusText">正在使用 MarkItDown 解析檔案...</span>
+            </div>
           </div>
 
           <button id="submitBtn" class="btn-primary" type="button">

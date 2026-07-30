@@ -326,6 +326,145 @@ document.addEventListener("DOMContentLoaded", () => {
   const statUnique = document.getElementById("statUnique")!;
   const wordListContainer = document.getElementById("wordListContainer") as HTMLUListElement;
 
+  // --- 新增：檔案上傳與 YouTube 字幕解析邏輯 ---
+  const uploadZone = document.getElementById("uploadZone")!;
+  const fileInput = document.getElementById("fileInput") as HTMLInputElement;
+  const uploadLoader = document.getElementById("uploadLoader")!;
+  const uploadStatusText = document.getElementById("uploadStatusText")!;
+
+  // 顯示/隱藏 Loading
+  const showLoader = (text: string) => {
+    uploadStatusText.textContent = text;
+    uploadLoader.style.display = "flex";
+  };
+  const hideLoader = () => {
+    uploadLoader.style.display = "none";
+  };
+
+  // 點擊上傳區觸發 file input
+  uploadZone.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  // 處理檔案選擇
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files && fileInput.files.length > 0) {
+      handleFile(fileInput.files[0]);
+    }
+  });
+
+  // 處理拖曳事件
+  uploadZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    uploadZone.classList.add("dragover");
+  });
+
+  uploadZone.addEventListener("dragleave", () => {
+    uploadZone.classList.remove("dragover");
+  });
+
+  uploadZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove("dragover");
+    if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  // 將檔案讀取並送至 API
+  function handleFile(file: File) {
+    showLoader("正在讀取檔案...");
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1]; // 取得 Base64 部分
+
+      showLoader("正在使用 MarkItDown 解析檔案...");
+      try {
+        const response = await fetch("/api/convert", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            fileName: file.name,
+            base64: base64
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.text) {
+          textInput.value = data.text;
+          alert("🎉 檔案解析成功！已自動填入下方的輸入框中。");
+        } else {
+          alert(`❌ 解析失敗: ${data.error || "未知錯誤"}`);
+        }
+      } catch (err: any) {
+        console.error("Upload Error:", err);
+        alert(`❌ 解析失敗: ${err.message || err}`);
+      } finally {
+        hideLoader();
+        fileInput.value = ""; // 重設以利重複上傳同一檔案
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // 偵測 YouTube 網址格式
+  const isYouTubeUrl = (url: string): boolean => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return !!(match && match[2].length === 11);
+  };
+
+  // 監聽貼上事件，實現即時自動字幕拉取
+  textInput.addEventListener("paste", (e) => {
+    const pastedText = e.clipboardData?.getData("text") || "";
+    if (isYouTubeUrl(pastedText.trim())) {
+      setTimeout(() => {
+        handleYouTubeUrl(pastedText.trim());
+      }, 100);
+    }
+  });
+
+  // 監聽 input 事件 (防抖/Debounce)
+  let ytTimeout: any = null;
+  textInput.addEventListener("input", () => {
+    const val = textInput.value.trim();
+    if (isYouTubeUrl(val)) {
+      clearTimeout(ytTimeout);
+      ytTimeout = setTimeout(() => {
+        handleYouTubeUrl(val);
+      }, 1000);
+    }
+  });
+
+  async function handleYouTubeUrl(url: string) {
+    showLoader("正在解析 YouTube 影片字幕...");
+    try {
+      const response = await fetch("/api/yt-transcript", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ url: url })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.text) {
+        textInput.value = data.text;
+        alert("🎉 成功自動取得 YouTube 影片字幕！");
+      } else {
+        alert(`❌ 無法取得該影片字幕: ${data.error || "可能是影片沒有提供字幕或語音軌"}`);
+      }
+    } catch (err: any) {
+      console.error("YT Transcript Error:", err);
+      alert(`❌ 獲取影片字幕失敗: ${err.message || err}`);
+    } finally {
+      hideLoader();
+    }
+  }
+
   // 即時監聽 Firestore 的 wordcloud collection
   const q = query(collection(db, WORDS_COLLECTION));
   onSnapshot(q, (snapshot) => {

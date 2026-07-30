@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Microsoft MarkItDown 與 YouTube 字幕線上轉換器，支援將 PDF、Word、Excel、PPT 檔案與 YT 影片轉換為 Markdown 格式以節省 Token。" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+    <title>MarkItDown & YouTube 萬能轉換器</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+      :root {
+        --font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+        --bg-gradient: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 100%);
+        --panel-bg: rgba(255, 255, 255, 0.02);
+        --panel-border: rgba(255, 255, 255, 0.08);
+        --text-primary: #f3f4f6;
+        --text-secondary: #9ca3af;
+        --accent-blue: #3b82f6;
+        --accent-purple: #8b5cf6;
+        --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        --accent-hover: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        --glow-shadow: 0 0 25px rgba(139, 92, 246, 0.25);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font-family);
+        background: var(--bg-gradient);
+        color: var(--text-primary);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow-x: hidden;
+      }
+
+      header {
+        text-align: center;
+        margin: 3rem 1rem 2rem 1rem;
+        max-width: 800px;
+      }
+
+      h1 {
+        font-size: 2.75rem;
+        font-weight: 800;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.75rem;
+        letter-spacing: -0.03em;
+        filter: drop-shadow(0 2px 10px rgba(59, 130, 246, 0.2));
+      }
+
+      header p {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        line-height: 1.6;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 1200px;
+        padding: 0 1.5rem;
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 2rem;
+        margin-bottom: 3rem;
+      }
+
+      @media (max-width: 900px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* 通用卡片外觀 */
+      .card {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 24px;
+        backdrop-filter: blur(16px);
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      /* 拖放上傳區 */
+      .upload-zone {
+        border: 2.5px dashed var(--panel-border);
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        text-align: center;
+        background: rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .upload-zone:hover {
+        border-color: var(--accent-blue);
+        background: rgba(59, 130, 246, 0.04);
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.08);
+      }
+
+      .upload-zone.dragover {
+        border-color: var(--accent-purple);
+        background: rgba(139, 92, 246, 0.08);
+        box-shadow: 0 0 25px rgba(139, 92, 246, 0.15);
+        transform: scale(1.02);
+      }
+
+      .upload-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 4px 10px rgba(139, 92, 246, 0.3));
+      }
+
+      .upload-text {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .upload-text .highlight {
+        color: var(--accent-blue);
+        text-decoration: underline;
+        font-weight: 700;
+      }
+
+      .upload-hint {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+      }
+
+      /* YouTube 輸入框 */
+      .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid var(--panel-border);
+      }
+
+      .divider:not(:empty)::before {
+        margin-right: 1rem;
+      }
+
+      .divider:not(:empty)::after {
+        margin-left: 1rem;
+      }
+
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+
+      label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .yt-input-wrapper {
+        display: flex;
+        gap: 0.75rem;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 0.875rem 1rem;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+      }
+
+      .btn {
+        background: var(--accent-gradient);
+        color: #ffffff;
+        border: none;
+        border-radius: 12px;
+        padding: 0.875rem 1.5rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: var(--glow-shadow);
+        white-space: nowrap;
+      }
+
+      .btn:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 0 30px rgba(139, 92, 246, 0.45);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      /* 輸出展示區 */
+      .output-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .output-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--panel-border);
+        padding-bottom: 1rem;
+      }
+
+      .output-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .output-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--panel-border);
+        color: var(--text-primary);
+        border-radius: 8px;
+        padding: 0.5rem 0.875rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--accent-blue);
+      }
+
+      .output-content-wrapper {
+        flex: 1;
+        position: relative;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      textarea.markdown-output {
+        flex: 1;
+        width: 100%;
+        min-height: 400px;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        color: #e5e7eb;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        resize: none;
+        transition: all 0.3s ease;
+      }
+
+      textarea.markdown-output:focus {
+        outline: none;
+        border-color: var(--accent-purple);
+      }
+
+      /* 全局載入遮罩 */
+      .loader-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(9, 13, 22, 0.95);
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .loader-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .spinner {
+        width: 45px;
+        height: 45px;
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        border-top-color: var(--accent-purple);
+        animation: spin 1s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .loader-text {
+        font-size: 1.05rem;
+        font-weight: 600;
+        background: var(--accent-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* 返回連結 */
+      .footer-nav {
+        margin-top: 1rem;
+        text-align: center;
+      }
+
+      .nav-link {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: color 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+      }
+
+      .nav-link:hover {
+        color: var(--accent-blue);
+      }
+
+      /* Toast 提示 */
+      .toast {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: rgba(139, 92, 246, 0.95);
+        color: #ffffff;
+        padding: 0.75rem 2rem;
+        border-radius: 30px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        z-index: 100;
+      }
+
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>⚡ MarkItDown & YouTube 萬能轉換器</h1>
+      <p>採用 Microsoft MarkItDown 技術與高效率 YouTube 字幕抓取引擎，將各類多媒體文檔一鍵轉為乾淨的 Markdown 格式，為您的 AI 模型提供最高效的文字輸入並節省高達 90% 的 Token！</p>
+    </header>
+
+    <div class="container">
+      <!-- 左欄：輸入與控制區 -->
+      <div class="card">
+        <!-- 檔案拖放上傳 -->
+        <div class="input-group">
+          <label>文檔檔案轉換</label>
+          <div class="upload-zone" id="uploadZone">
+            <div class="upload-content">
+              <div class="upload-icon">📥</div>
+              <div class="upload-text">
+                <span class="highlight">點擊選擇檔案</span> 或將檔案拖曳至此
+              </div>
+              <div class="upload-hint">支援 PDF, DOCX, XLSX, PPTX, TXT, MD 等格式</div>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.pptx,.txt,.md" style="display: none;" />
+          </div>
+        </div>
+
+        <div class="divider">或</div>
+
+        <!-- YouTube 連結解析 -->
+        <div class="input-group">
+          <label for="ytUrlInput">YouTube 影片字幕提取</label>
+          <div class="yt-input-wrapper">
+            <input type="text" id="ytUrlInput" placeholder="請貼上 YouTube 影片網址..." />
+            <button class="btn" id="ytBtn">⚡ 提取字幕</button>
+          </div>
+          <div class="upload-hint" style="margin-top: 0.25rem;">支援一般影片與 YouTube Shorts，將自動優選繁體中文、簡體中文與英文字幕。</div>
+        </div>
+
+        <!-- 返回文字雲 -->
+        <div class="footer-nav">
+          <a href="/" class="nav-link">
+            <span>⬅️</span> 返回即時協作文字雲
+          </a>
+        </div>
+      </div>
+
+      <!-- 右欄：輸出結果展示區 -->
+      <div class="card output-card">
+        <div class="output-header">
+          <div class="output-title">
+            <span>📝</span> 轉換結果 (Markdown)
+          </div>
+          <div class="output-actions">
+            <button class="btn-secondary" id="copyBtn">📋 複製內容</button>
+            <button class="btn-secondary" id="downloadBtn">💾 下載 .md 檔案</button>
+          </div>
+        </div>
+
+        <div class="output-content-wrapper">
+          <textarea class="markdown-output" id="markdownOutput" readonly placeholder="轉換後的 Markdown 文字將在此顯示..."></textarea>
+          
+          <!-- 內部 Loader 遮罩 -->
+          <div class="loader-overlay" id="loaderOverlay">
+            <div class="spinner"></div>
+            <div class="loader-text" id="loaderText">正在解析轉換中...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast 彈窗 -->
+    <div class="toast" id="toastEl">已成功複製到剪貼簿！</div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const uploadZone = document.getElementById("uploadZone");
+        const fileInput = document.getElementById("fileInput");
+        const ytUrlInput = document.getElementById("ytUrlInput");
+        const ytBtn = document.getElementById("ytBtn");
+        const markdownOutput = document.getElementById("markdownOutput");
+        const copyBtn = document.getElementById("copyBtn");
+        const downloadBtn = document.getElementById("downloadBtn");
+        const loaderOverlay = document.getElementById("loaderOverlay");
+        const loaderText = document.getElementById("loaderText");
+        const toastEl = document.getElementById("toastEl");
+
+        // 顯示載入遮罩
+        const showLoader = (text) => {
+          loaderText.textContent = text;
+          loaderOverlay.classList.add("active");
+        };
+
+        // 隱藏載入遮罩
+        const hideLoader = () => {
+          loaderOverlay.classList.remove("active");
+        };
+
+        // 顯示 Toast 訊息
+        const showToast = (message) => {
+          toastEl.textContent = message;
+          toastEl.classList.add("show");
+          setTimeout(() => {
+            toastEl.classList.remove("show");
+          }, 2500);
+        };
+
+        // 點擊上傳區觸發
+        uploadZone.addEventListener("click", () => {
+          fileInput.click();
+        });
+
+        // 檔案選擇變更
+        fileInput.addEventListener("change", () => {
+          if (fileInput.files && fileInput.files.length > 0) {
+            handleFileConversion(fileInput.files[0]);
+          }
+        });
+
+        // 處理拖曳事件
+        uploadZone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          uploadZone.classList.add("dragover");
+        });
+
+        uploadZone.addEventListener("dragleave", () => {
+          uploadZone.classList.remove("dragover");
+        });
+
+        uploadZone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          uploadZone.classList.remove("dragover");
+          if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+            handleFileConversion(e.dataTransfer.files[0]);
+          }
+        });
+
+        // 檔案上傳 API 串接
+        function handleFileConversion(file) {
+          showLoader("正在讀取檔案...");
+          const reader = new FileReader();
+          reader.onload = async () => {
+            const result = reader.result;
+            const base64 = result.split(",")[1]; // 獲取 Base64
+
+            showLoader("正在使用 MarkItDown 解析文檔...");
+            try {
+              const response = await fetch("/api/convert", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  fileName: file.name,
+                  base64: base64
+                })
+              });
+
+              const data = await response.json();
+              if (response.ok && data.text) {
+                markdownOutput.value = data.text;
+                showToast("🎉 檔案轉換成功！");
+              } else {
+                alert(`❌ 轉換失敗: ${data.error || "未知錯誤"}`);
+              }
+            } catch (err) {
+              console.error("API Error:", err);
+              alert(`❌ 連線伺服器失敗: ${err.message || err}`);
+            } finally {
+              hideLoader();
+              fileInput.value = ""; // 清空，使可重複選取同一檔案
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+
+        // 點擊 YouTube 提取字幕
+        ytBtn.addEventListener("click", () => {
+          const url = ytUrlInput.value.trim();
+          if (!url) {
+            alert("請先貼上 YouTube 影片網址！");
+            return;
+          }
+          handleYouTubeTranscript(url);
+        });
+
+        // 支援 Enter 鍵解析 YouTube
+        ytUrlInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            ytBtn.click();
+          }
+        });
+
+        // YouTube API 串接
+        async function handleYouTubeTranscript(url) {
+          showLoader("正在為您抓取 YouTube 影片字幕...");
+          try {
+            const response = await fetch("/api/yt-transcript", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: url })
+            });
+
+            const data = await response.json();
+            if (response.ok && data.text) {
+              markdownOutput.value = data.text;
+              showToast("🎉 字幕提取成功！");
+              ytUrlInput.value = ""; // 清空輸入框
+            } else {
+              alert(`❌ 提取失敗: ${data.error || "可能是影片沒有包含字幕或不支援此連結"}`);
+            }
+          } catch (err) {
+            console.error("YT API Error:", err);
+            alert(`❌ 請求失敗: ${err.message || err}`);
+          } finally {
+            hideLoader();
+          }
+        }
+
+        // 複製 Markdown 內容
+        copyBtn.addEventListener("click", () => {
+          const text = markdownOutput.value.trim();
+          if (!text) {
+            showToast("⚠️ 沒有可複製的內容！");
+            return;
+          }
+          navigator.clipboard.writeText(text).then(() => {
+            showToast("📋 已複製到剪貼簿！");
+          }).catch(err => {
+            console.error("Copy failed:", err);
+            // Fallback for older browsers
+            markdownOutput.select();
+            document.execCommand("copy");
+            showToast("📋 已複製到剪貼簿！");
+          });
+        });
+
+        // 下載 .md 檔案
+        downloadBtn.addEventListener("click", () => {
+          const text = markdownOutput.value.trim();
+          if (!text) {
+            showToast("⚠️ 沒有可下載的內容！");
+            return;
+          }
+          const blob = new Blob([text], { type: "text/markdown;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", `markitdown_converted_${Date.now()}.md`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showToast("💾 檔案已下載！");
+        });
+      });
+    </script>
+  </body>
+</html>
